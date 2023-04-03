@@ -5,6 +5,25 @@
 import * as vscode from "vscode";
 
 export function activate(context: vscode.ExtensionContext) {
+  const reloadCommand = vscode.commands.registerCommand(
+    "interactivity-vscode.reload",
+    async () => {
+      // Deactivate and reactivate the extension
+      const extension = vscode.extensions.getExtension(
+        "frontity.interactivity-vscode"
+      );
+      if (extension) {
+        if (extension.isActive) {
+          // Call your extension's deactivate function if it exists
+          await extension.deactivate?.();
+        }
+        await extension.activate();
+      }
+    }
+  );
+
+  context.subscriptions.push(reloadCommand);
+
   const provider1 = vscode.languages.registerCompletionItemProvider("php", {
     provideCompletionItems(
       document: vscode.TextDocument,
