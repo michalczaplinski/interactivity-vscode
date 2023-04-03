@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 import * as ts from "typescript";
 
+let program, checker;
+
 // Define a function that recursively traverses the AST and generates the list of paths to each nested key
 function getPaths(node: ts.Node, parentKey?: string): string[] {
   let paths: string[] = [];
@@ -14,7 +16,10 @@ function getPaths(node: ts.Node, parentKey?: string): string[] {
       if (ts.isObjectLiteralExpression(prop.initializer)) {
         paths = paths.concat(getPaths(prop.initializer, currentKey));
       } else {
-        paths.push(currentKey);
+        paths.push([
+          currentKey,
+          checker.typeToString(checker.getTypeAtLocation(prop)),
+        ]);
       }
     });
   }
@@ -53,10 +58,14 @@ export async function activate(context: vscode.ExtensionContext) {
         };
 
         // Create a TypeScript program with the store.js file and the compiler options
-        const program = ts.createProgram([storeFilePath], options);
+        program = ts.createProgram([storeFilePath], options);
+        checker = program.getTypeChecker();
 
         // Get the default export symbol from the store.js file
         const sourceFile = program.getSourceFile(storeFilePath);
+
+        const moduleSymbol = checker.getSymbolAtLocation(sourceFile!);
+        const fileExports = checker.getExportsOfModule(moduleSymbol!);
 
         // Get the AST node of the default export object
         const defaultExportNode = sourceFile?.statements[0].expression;
@@ -69,10 +78,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Here we should use TSC to get the file and parse it
 
-        return paths.map(
-          (path) =>
-            new vscode.CompletionItem(path, vscode.CompletionItemKind.Method)
-        );
+        return paths.map(([path, type]) => {
+          return new vscode.CompletionItem(path, getCompletionItemKind(type));
+        });
       },
     },
     "=" // triggered whenever a '.' is being typed
@@ -80,3 +88,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(provider);
 }
+
+const getCompletionItemKind = (type: string) => {
+  if (type.includes("=>")) return vscode.CompletionItemKind.Function;
+  return vscode.CompletionItemKind.Value;
+};
