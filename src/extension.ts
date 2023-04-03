@@ -13,10 +13,6 @@ export function activate(context: vscode.ExtensionContext) {
         "frontity.interactivity-vscode"
       );
       if (extension) {
-        if (extension.isActive) {
-          // Call your extension's deactivate function if it exists
-          await extension.deactivate?.();
-        }
         await extension.activate();
       }
     }
