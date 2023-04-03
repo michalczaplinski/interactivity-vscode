@@ -10,10 +10,11 @@ function getPaths(node: ts.Node, parentKey?: string): string[] {
       const currentKey = parentKey
         ? `${parentKey}.${prop.name.text}`
         : prop.name.text;
-      paths.push(currentKey);
 
       if (ts.isObjectLiteralExpression(prop.initializer)) {
         paths = paths.concat(getPaths(prop.initializer, currentKey));
+      } else {
+        paths.push(currentKey);
       }
     });
   }
@@ -68,12 +69,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Here we should use TSC to get the file and parse it
 
-        return [
-          new vscode.CompletionItem(
-            "hello hello",
-            vscode.CompletionItemKind.Method
-          ),
-        ];
+        return paths.map(
+          (path) =>
+            new vscode.CompletionItem(path, vscode.CompletionItemKind.Method)
+        );
       },
     },
     "=" // triggered whenever a '.' is being typed
