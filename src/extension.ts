@@ -1,85 +1,32 @@
-/*---------------------------------------------------------
- * Copyright (C) Microsoft Corporation. All rights reserved.
- *--------------------------------------------------------*/
-
 import * as vscode from "vscode";
+import * as ts from "typescript";
 
-export function activate(context: vscode.ExtensionContext) {
-  const reloadCommand = vscode.commands.registerCommand(
-    "interactivity-vscode.reload",
-    async () => {
-      // Deactivate and reactivate the extension
-      const extension = vscode.extensions.getExtension(
-        "frontity.interactivity-vscode"
-      );
-      if (extension) {
-        await extension.activate();
+// Define a function that recursively traverses the AST and generates the list of paths to each nested key
+function getPaths(node: ts.Node, parentKey?: string): string[] {
+  let paths: string[] = [];
+
+  if (ts.isObjectLiteralExpression(node)) {
+    node.properties.forEach((prop) => {
+      const currentKey = parentKey
+        ? `${parentKey}.${prop.name.text}`
+        : prop.name.text;
+
+      if (ts.isObjectLiteralExpression(prop.initializer)) {
+        paths = paths.concat(getPaths(prop.initializer, currentKey));
+      } else {
+        paths.push(currentKey);
       }
-    }
-  );
+    });
+  }
 
-  context.subscriptions.push(reloadCommand);
+  return paths;
+}
 
-  const provider1 = vscode.languages.registerCompletionItemProvider("php", {
-    provideCompletionItems(
-      document: vscode.TextDocument,
-      position: vscode.Position,
-      token: vscode.CancellationToken,
-      context: vscode.CompletionContext
-    ) {
-      // a simple completion item which inserts `Hello World!`
-      const simpleCompletion = new vscode.CompletionItem("Hello World!");
-
-      // a completion item that inserts its text as snippet,
-      // the `insertText`-property is a `SnippetString` which will be
-      // honored by the editor.
-      const snippetCompletion = new vscode.CompletionItem(
-        "Good part of the day"
-      );
-      snippetCompletion.insertText = new vscode.SnippetString(
-        "Good ${1|morning,afternoon,evening|}. It is ${1}, right?"
-      );
-      const docs: any = new vscode.MarkdownString(
-        "Inserts a snippet that lets you select [link](x.ts)."
-      );
-      snippetCompletion.documentation = docs;
-      docs.baseUri = vscode.Uri.parse("http://example.com/a/b/c/");
-
-      // a completion item that can be accepted by a commit character,
-      // the `commitCharacters`-property is set which means that the completion will
-      // be inserted and then the character will be typed.
-      const commitCharacterCompletion = new vscode.CompletionItem("console");
-      commitCharacterCompletion.commitCharacters = ["."];
-      commitCharacterCompletion.documentation = new vscode.MarkdownString(
-        "Press `.` to get `console.`"
-      );
-
-      // a completion item that retriggers IntelliSense when being accepted,
-      // the `command`-property is set which the editor will execute after
-      // completion has been inserted. Also, the `insertText` is set so that
-      // a space is inserted after `new`
-      const commandCompletion = new vscode.CompletionItem("new");
-      commandCompletion.kind = vscode.CompletionItemKind.Keyword;
-      commandCompletion.insertText = "new ";
-      commandCompletion.command = {
-        command: "editor.action.triggerSuggest",
-        title: "Re-trigger completions...",
-      };
-
-      // return all completion items as array
-      return [
-        simpleCompletion,
-        snippetCompletion,
-        commitCharacterCompletion,
-        commandCompletion,
-      ];
-    },
-  });
-
-  const provider2 = vscode.languages.registerCompletionItemProvider(
+export async function activate(context: vscode.ExtensionContext) {
+  const provider = vscode.languages.registerCompletionItemProvider(
     "php",
     {
-      provideCompletionItems(
+      async provideCompletionItems(
         document: vscode.TextDocument,
         position: vscode.Position
       ) {
@@ -88,20 +35,48 @@ export function activate(context: vscode.ExtensionContext) {
         const linePrefix = document
           .lineAt(position)
           .text.substr(0, position.character);
-        if (!linePrefix.endsWith("console.")) {
+        if (!/data-wp-[\w.]+=$/.test(linePrefix)) {
           return undefined;
         }
 
-        return [
-          new vscode.CompletionItem("log", vscode.CompletionItemKind.Method),
-          new vscode.CompletionItem("warn", vscode.CompletionItemKind.Method),
-          new vscode.CompletionItem("error", vscode.CompletionItemKind.Method),
-          new vscode.CompletionItem("bar", vscode.CompletionItemKind.Method),
-        ];
+        const uri = document.uri;
+
+        // Get the path to the directory containing the document
+        const dir = uri.path.substring(0, uri.path.lastIndexOf("/"));
+        const storeFilePath = dir + "/store.js";
+
+        // Define the compiler options
+        const options: ts.CompilerOptions = {
+          target: ts.ScriptTarget.ES2015,
+          module: ts.ModuleKind.CommonJS,
+          allowJs: true,
+        };
+
+        // Create a TypeScript program with the store.js file and the compiler options
+        const program = ts.createProgram([storeFilePath], options);
+
+        // Get the default export symbol from the store.js file
+        const sourceFile = program.getSourceFile(storeFilePath);
+
+        // Get the AST node of the default export object
+        const defaultExportNode = sourceFile?.statements[0].expression;
+
+        // Use the getPaths function to generate the list of paths to each nested key of the default export object
+        const paths = getPaths(defaultExportNode!, undefined);
+
+        // Log the list of paths
+        console.log(paths);
+
+        // Here we should use TSC to get the file and parse it
+
+        return paths.map(
+          (path) =>
+            new vscode.CompletionItem(path, vscode.CompletionItemKind.Method)
+        );
       },
     },
-    "." // triggered whenever a '.' is being typed
+    "=" // triggered whenever a '.' is being typed
   );
 
-  context.subscriptions.push(provider1, provider2);
+  context.subscriptions.push(provider);
 }
