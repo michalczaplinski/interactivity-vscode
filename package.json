@@ -16,7 +16,7 @@
     "Other"
   ],
   "activationEvents": [
-    "*"
+    "workspaceContains:**/store.js"
   ],
   "main": "./out/extension.js",
   "scripts": {
