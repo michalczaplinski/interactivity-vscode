@@ -4,11 +4,9 @@ export async function activate(context: vscode.ExtensionContext) {
   const provider = vscode.languages.registerCompletionItemProvider(
     "php",
     {
-      provideCompletionItems(
+      async provideCompletionItems(
         document: vscode.TextDocument,
-        position: vscode.Position,
-        token: vscode.CancellationToken,
-        context: vscode.CompletionContext
+        position: vscode.Position
       ) {
         // get all text until the `position` and check if it reads `console.`
         // and if so then complete if `log`, `warn`, and `error`
@@ -20,6 +18,11 @@ export async function activate(context: vscode.ExtensionContext) {
         }
 
         const uri = document.uri;
+        // Get the path to the directory containing the document
+        const dir = uri.path.substring(0, uri.path.lastIndexOf("/"));
+        const storeFilePath = dir + "/store.js";
+
+        // Here we should use TSC to get the file and parse it
 
         return [
           new vscode.CompletionItem(
