@@ -20,16 +20,18 @@ export async function activate(context: vscode.ExtensionContext) {
         const uri = document.uri;
         // Get the path to the directory containing the document
         const dir = uri.path.substring(0, uri.path.lastIndexOf("/"));
-        const storeFilePath = dir + "/store.js";
+        const storeFilePath = dir + "/store.mjs";
 
-        // Here we should use TSC to get the file and parse it
+        const { default: store } = await import( storeFilePath );
 
-        return [
-          new vscode.CompletionItem(
-            "hello hello",
+        const paths = Object.keys( store.selectors.wpmovies ); // FIXME: Temporarily hardcoded path.
+
+        return paths.map( (item) => {
+          return new vscode.CompletionItem(
+            item,
             vscode.CompletionItemKind.Method
-          ),
-        ];
+          );
+        } );
       },
     },
     "=" // triggered whenever a '.' is being typed
