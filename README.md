@@ -3,6 +3,11 @@
 A VSCode extension that provides autocompletion for the [Interactivity
 API](https://make.wordpress.org/core/2023/03/30/proposal-the-interactivity-api-a-better-developer-experience-in-building-interactive-blocks/).
 
+⚠️ **Highly experimental and unstable. Do not use for anything other than tinkering or further development** ⚠️
+
+
+https://github.com/michalczaplinski/interactivity-vscode/assets/5417266/3fe10446-3273-4165-b007-bf39d631b86f
+
 ## Current Limitations
 
 - The extension only works for blocks where the interactivity is defined in a
@@ -19,7 +24,7 @@ API](https://make.wordpress.org/core/2023/03/30/proposal-the-interactivity-api-a
 npm run watch
 ```
 
-And then you can run the "Run Extension" debug task to
+And then you can run the "Run Extension" VSCode debug task to run the extension in debug mode.
 
 ### Build the extension for production:
 
